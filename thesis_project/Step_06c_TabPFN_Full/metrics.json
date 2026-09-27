@@ -8,6 +8,6 @@
   "weighted_f1": 0.7875,
   "roc_auc_ovr": 0.9235,
   "fit_seconds": 2.5,
-  "predict_seconds": 300.4,
+  "predict_seconds": 289.5,
   "device": "cuda"
 }

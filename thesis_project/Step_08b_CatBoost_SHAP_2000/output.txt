@@ -34,11 +34,5 @@ family_hair_fall_history        0.2407             0.0185         0.2358        
   ],
   "explainer": "TreeExplainer"
 }
-{'model': 'CatBoost',
- 'size': '2000',
- 'rows_explained': 1000,
- 'seconds': 0.3,
- 'top_5': ['stress_level', 'iron', 'total_protein', 'alt_liver', 'vitamin_d'],
- 'explainer': 'TreeExplainer'}
 
-[finished OK | time: 2.1s | run #15]
+[finished OK | time: 2.1s | run #202]

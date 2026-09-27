@@ -10,7 +10,7 @@ depth=8 lr=0.01  CV macro-F1 = 0.6888 +/- 0.0157
 depth=8 lr=0.03  CV macro-F1 = 0.7071 +/- 0.0172
 depth=8 lr=0.1   CV macro-F1 = 0.7097 +/- 0.0085
 
-Best: depth=4 lr=0.03 iterations=999 (CV macro-F1 0.7403) | grid search took 231s
+Best: depth=4 lr=0.03 iterations=999 (CV macro-F1 0.7403) | grid search took 213s
 {
   "model": "CatBoost",
   "size": "2000",
@@ -20,7 +20,7 @@ Best: depth=4 lr=0.03 iterations=999 (CV macro-F1 0.7403) | grid search took 231
   "macro_f1": 0.7377,
   "weighted_f1": 0.7496,
   "roc_auc_ovr": 0.9029,
-  "fit_seconds": 1.9,
+  "fit_seconds": 1.8,
   "predict_seconds": 0.0,
   "depth": 4,
   "learning_rate": 0.03,
@@ -37,19 +37,5 @@ Best: depth=4 lr=0.03 iterations=999 (CV macro-F1 0.7403) | grid search took 231
    macro avg     0.7579    0.7253    0.7377      4322
 weighted avg     0.7546    0.7497    0.7496      4322
 
-{'model': 'CatBoost',
- 'size': '2000',
- 'context_rows': 2000,
- 'test_rows': 4322,
- 'accuracy': 0.7497,
- 'macro_f1': 0.7377,
- 'weighted_f1': 0.7496,
- 'roc_auc_ovr': 0.9029,
- 'fit_seconds': 1.9,
- 'predict_seconds': 0.0,
- 'depth': 4,
- 'learning_rate': 0.03,
- 'iterations': 999,
- 'cv_macro_f1': 0.7403}
 
-[finished OK | time: 232.9s | run #6]
+[finished OK | time: 214.7s | run #193]

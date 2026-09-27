@@ -68,15 +68,5 @@ Loading weights from local directory
    macro avg     0.7881    0.7713    0.7779      4322
 weighted avg     0.7910    0.7844    0.7863      4322
 
-{'model': 'TabFM',
- 'size': '2000',
- 'context_rows': 2000,
- 'test_rows': 4322,
- 'accuracy': 0.7844,
- 'macro_f1': 0.7779,
- 'weighted_f1': 0.7863,
- 'roc_auc_ovr': 0.9209,
- 'fit_seconds': 15.9,
- 'predict_seconds': 209.3}
 
-[finished OK | time: 225.5s | run #12]
+[finished OK | time: 225.5s | run #199]

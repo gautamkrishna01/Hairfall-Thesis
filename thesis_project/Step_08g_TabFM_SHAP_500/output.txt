@@ -39,13 +39,5 @@ family_hair_fall_history        0.0290             0.0255         0.0029        
   "nsamples": 100,
   "background": 5
 }
-{'model': 'TabFM',
- 'size': '500',
- 'rows_explained': 20,
- 'seconds': 158.0,
- 'top_5': ['iron', 'stress_level', 'calcium', 'total_protein', 'alt_liver'],
- 'explainer': 'KernelExplainer',
- 'nsamples': 100,
- 'background': 5}
 
-[finished OK | time: 173.6s | run #20]
+[finished OK | time: 173.6s | run #207]

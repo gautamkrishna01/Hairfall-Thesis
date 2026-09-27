@@ -154,7 +154,7 @@ function paintStep() {
   if (run) {
     if (run.seconds != null) meta.push(`<span>${icon("history")} ${fmtTime(run.seconds)}</span>`);
     meta.push(`<span>Run #${run.id}${run.started_at && run.source !== "kaggle" ? " · " + new Date(run.started_at).toLocaleString() : ""}</span>`);
-    meta.push(`<span class="pill src">${run.source === "kaggle" ? "Ran on Kaggle · Tesla T4 GPU" : "Ran on this Mac"}</span>`);
+    if (run.source === "kaggle") meta.push(`<span class="pill ok"><i></i>Latest · from Documents</span>`);
   }
   $("#nbMeta").innerHTML = meta.join('<span class="sep"></span>');
   const busy = isBusy(s.last_run), b = $("#nbRun");
@@ -258,7 +258,6 @@ function timingHtml(run, d) {   // one compact line instead of a grid of cards
     bits.push(`explaining ${d.rows_explained} rows <b>${fmtTime(d.seconds)}</b>${d.rows_explained ? ` (${fmtTime(d.seconds / d.rows_explained)} per row)` : ""}`);
   }
   if (run.seconds != null) bits.push(`step total <b>${fmtTime(run.seconds)}</b>`);
-  bits.push(run.source === "kaggle" ? "on a Kaggle Tesla T4 GPU" : "on this Mac");
   return `<div class="timeline">${icon("history")}<span>${bits.join(" · ")}</span></div>`;
 }
 function paintOutput(run) {

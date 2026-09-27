@@ -7,7 +7,7 @@
 #   ./stop.sh && tar -xzf backups/<dir>/minio.tar.gz -C backend/data && ./start.sh
 set -eu
 ROOT="$(cd "$(dirname "$0")" && pwd)"
-export PATH="$HOME/.orbstack/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+export PATH="$HOME/.orbstack/bin:/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
 DEST="$ROOT/backups/$(date +%Y-%m-%d_%H%M%S)"
 mkdir -p "$DEST"
 cd "$ROOT/backend"

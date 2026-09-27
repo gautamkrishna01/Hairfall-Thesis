@@ -1,0 +1,279 @@
+{
+ "acc": {
+  "CatBoost": [
+   69.37,
+   74.97,
+   78.2
+  ],
+  "TabPFN": [
+   76.89,
+   78.27,
+   78.62
+  ],
+  "TabFM": [
+   76.84,
+   78.44,
+   78.67
+  ]
+ },
+ "f1": {
+  "CatBoost": [
+   0.6648,
+   0.7377,
+   0.7744
+  ],
+  "TabPFN": [
+   0.7616,
+   0.7757,
+   0.7785
+  ],
+  "TabFM": [
+   0.7603,
+   0.7779,
+   0.7802
+  ]
+ },
+ "auc": {
+  "CatBoost": [
+   0.8611,
+   0.9029,
+   0.9197
+  ],
+  "TabPFN": [
+   0.9159,
+   0.922,
+   0.9235
+  ],
+  "TabFM": [
+   0.9151,
+   0.9209,
+   0.9233
+  ]
+ },
+ "mcnemar": [
+  [
+   "500",
+   "CatBoost vs TabPFN",
+   272,
+   597,
+   "< 0.0001",
+   true
+  ],
+  [
+   "500",
+   "CatBoost vs TabFM",
+   280,
+   603,
+   "< 0.0001",
+   true
+  ],
+  [
+   "500",
+   "TabPFN vs TabFM",
+   71,
+   69,
+   "0.93",
+   false
+  ],
+  [
+   "2,000",
+   "CatBoost vs TabPFN",
+   194,
+   337,
+   "< 0.0001",
+   true
+  ],
+  [
+   "2,000",
+   "CatBoost vs TabFM",
+   196,
+   346,
+   "< 0.0001",
+   true
+  ],
+  [
+   "2,000",
+   "TabPFN vs TabFM",
+   60,
+   67,
+   "0.59",
+   false
+  ],
+  [
+   "Full",
+   "CatBoost vs TabPFN",
+   111,
+   129,
+   "0.27",
+   false
+  ],
+  [
+   "Full",
+   "CatBoost vs TabFM",
+   114,
+   134,
+   "0.23",
+   false
+  ],
+  [
+   "Full",
+   "TabPFN vs TabFM",
+   33,
+   35,
+   "0.90",
+   false
+  ]
+ ],
+ "cm": {
+  "errors": 924,
+  "neigh": 922,
+  "lh": 2,
+  "hl": 0,
+  "acc_low": 0.8488431876606684,
+  "f1": [
+   0.701,
+   0.708,
+   0.71
+  ],
+  "tiers_f1": [
+   0.857,
+   0.708,
+   0.771
+  ]
+ },
+ "prob": {
+  "CatBoost|500": {
+   "logloss": 0.6616,
+   "brier": 0.3996,
+   "mean_conf": 0.6521,
+   "acc": 0.6937
+  },
+  "CatBoost|2000": {
+   "logloss": 0.5589,
+   "brier": 0.3395,
+   "mean_conf": 0.6922,
+   "acc": 0.7497
+  },
+  "CatBoost|Full": {
+   "logloss": 0.4898,
+   "brier": 0.3028,
+   "mean_conf": 0.7639,
+   "acc": 0.782
+  },
+  "TabPFN|500": {
+   "logloss": 0.5025,
+   "brier": 0.3099,
+   "mean_conf": 0.777,
+   "acc": 0.7689
+  },
+  "TabPFN|2000": {
+   "logloss": 0.4807,
+   "brier": 0.2978,
+   "mean_conf": 0.7924,
+   "acc": 0.7827
+  },
+  "TabPFN|Full": {
+   "logloss": 0.4747,
+   "brier": 0.2947,
+   "mean_conf": 0.7863,
+   "acc": 0.7862
+  },
+  "TabFM|500": {
+   "logloss": 0.5072,
+   "brier": 0.3123,
+   "mean_conf": 0.7969,
+   "acc": 0.7684
+  },
+  "TabFM|2000": {
+   "logloss": 0.4911,
+   "brier": 0.3019,
+   "mean_conf": 0.8104,
+   "acc": 0.7844
+  },
+  "TabFM|Full": {
+   "logloss": 0.4785,
+   "brier": 0.2959,
+   "mean_conf": 0.8054,
+   "acc": 0.7867
+  }
+ },
+ "overlap": {
+  "all3": 3251,
+  "two": 147,
+  "one": 131,
+  "none": 793,
+  "n": 4322
+ },
+ "share": {
+  "CatBoost": 84,
+  "TabPFN": 86,
+  "TabFM": 86
+ },
+ "spread": {
+  "gender": 1.1,
+  "age": 2.0
+ },
+ "shap10": {
+  "f": [
+   "iron",
+   "stress_level",
+   "total_protein",
+   "alt_liver",
+   "vitamin_d",
+   "calcium",
+   "manganese",
+   "body_water_content",
+   "family_hair_fall_history",
+   "stress"
+  ],
+  "v": [
+   0.7026,
+   0.6914,
+   0.6376,
+   0.5675,
+   0.561,
+   0.4791,
+   0.4072,
+   0.3379,
+   0.2898,
+   0.2731
+  ]
+ },
+ "spearman": {
+  "stress_level": 0.33,
+  "iron": -0.31,
+  "total_protein": -0.3,
+  "vitamin_d": -0.26,
+  "alt_liver": 0.25,
+  "calcium": -0.23
+ },
+ "rc": [
+  0.93,
+  0.9,
+  0.96
+ ],
+ "time": {
+  "CatBoost": 3.3,
+  "TabPFN": 292.0,
+  "TabFM": 3097.3
+ },
+ "ptime": {
+  "CatBoost": 0.0,
+  "TabPFN": 289.5,
+  "TabFM": 3082.2
+ },
+ "shaptime": {
+  "tabpfn": 3251.3,
+  "tabfm": 8491.4
+ },
+ "gain": {
+  "CatBoost": 8.83,
+  "TabPFN": 1.73,
+  "TabFM": 1.83
+ },
+ "classes": [
+  9723,
+  7562,
+  4321
+ ]
+}

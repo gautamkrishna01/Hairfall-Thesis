@@ -148,19 +148,34 @@ def _model(kind, size):
             m.load_model(str(CATBOOST_MODEL))
         elif kind == "tabpfn":
             from tabpfn import TabPFNClassifier
-            m = TabPFNClassifier(device=_device(), random_state=SEED, ignore_pretraining_limits=True)
+            # fit_with_cache keeps the context's attention state, so each patient takes ~1 s instead of a full pass
+            # over the context (~70 s on CPU). Not used for Full (17k rows): the cache would need too much memory.
+            m = TabPFNClassifier(device=_device(), random_state=SEED, ignore_pretraining_limits=True,
+                                 fit_mode="fit_preprocessors" if size == "Full" else "fit_with_cache")
             m.fit(*_context(size))
         elif kind == "tabfm":
             sys.modules.setdefault("flax", None)  # tabfm's optional JAX backend is not used
             from tabfm import TabFMClassifier
             from tabfm import tabfm_v1_0_0_pytorch as tabfm_v1
-            # default bf16 weights, as on Kaggle (float32 doubles the memory and does not fit next to TabPFN on a Mac)
+            # default bf16 weights (3 GB). float32 is ~2.4x faster on CPU but needs 6 GB more and got the server OOM-killed
             m = TabFMClassifier(model=tabfm_v1.load(device=_device()), n_estimators=1)
             m.fit(*_context(size))
         else:
             raise ValueError(kind)
         _cache[key] = m
+        _release_memory()
         return m
+
+
+def _release_memory():
+    """Loading a model briefly holds its float32 checkpoint (TabFM: 6 GB); hand that memory back to the OS."""
+    import ctypes
+    import gc
+    gc.collect()
+    try:
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except OSError:  # not glibc (e.g. macOS)
+        pass
 
 
 def _free_gpu(keep=None):
@@ -217,11 +232,45 @@ def _predict_raw(kind, size, row: pd.DataFrame):
     return out
 
 
+# fallback timings (s) on a CPU-only laptop, used until real ones exist in the history
+DEFAULT_EST = {"catboost": 1, "tabpfn": 2, "tabfm": 40}
+LOAD_EST = {"catboost": 3, "tabpfn": 30, "tabfm": 90}     # extra, only when the model is not in memory yet
+ORDER = ["catboost", "tabpfn", "tabfm"]                    # fastest first, so the answer appears early
+
+
+def estimates(models: dict) -> dict:
+    """Expected seconds per model = median of its recent successful runs at the same size (+ load time if cold)."""
+    seen: dict = {}
+    with store.pg() as c:
+        for (res,) in c.execute("SELECT results FROM predictions WHERE status='ok' ORDER BY id DESC LIMIT 40"):
+            for k, r in (res or {}).items():
+                if isinstance(r, dict) and r.get("status") == "ok" and r.get("predict_seconds") is not None:
+                    seen.setdefault((k, r.get("size")), []).append(r["predict_seconds"])
+    out = {}
+    for k, size in models.items():
+        v = seen.get((k, size))
+        base = float(np.median(v[:10])) if v else float(DEFAULT_EST[k])
+        out[k] = round(base + (0 if (k, size) in _cache else LOAD_EST[k]), 1)
+    return out
+
+
+def _consensus(results):
+    ok = [r for r in results.values() if isinstance(r, dict) and r.get("status") == "ok"]
+    if not ok:
+        return None
+    p = np.mean([r["proba"] for r in ok], axis=0)
+    return {"proba": [round(float(x), 4) for x in p], "pred": int(np.argmax(p)),
+            "agree": len({r["pred"] for r in ok}) == 1, "n": len(ok)}
+
+
 def run(pid: int, inputs: dict, models: dict):
-    """Background job: predict with each chosen model, saving results to Postgres as they arrive."""
+    """Background job: predict with each chosen model (fastest first), saving results and a running
+    consensus to Postgres after every model, so the UI can show an answer as soon as the first models finish."""
     X, _ = train()
     row = pd.DataFrame([inputs])[list(X.columns)]
-    results, t0 = {}, time.time()
+    t0 = time.time()
+    models = {k: models[k] for k in ORDER if k in models}
+    results = {"_est": {"t0": t0, "seconds": estimates(models)}}
 
     def save(status, extra_sql="", extra=()):
         with store.pg() as c:
@@ -230,7 +279,7 @@ def run(pid: int, inputs: dict, models: dict):
 
     with _lock:
         for kind, size in models.items():
-            results[kind] = {"size": size, "status": "running"}
+            results[kind] = {"size": size, "status": "running", "started": time.time()}
             save("running")
             try:
                 ts = time.time()
@@ -239,15 +288,11 @@ def run(pid: int, inputs: dict, models: dict):
             except Exception as exc:  # noqa: BLE001
                 log.exception("prediction %s %s failed", pid, kind)
                 results[kind] = {"size": size, "status": "error", "error": f"{type(exc).__name__}: {exc}"}
-        ok = [r for r in results.values() if r["status"] == "ok"]
-        consensus = None
-        if ok:
-            p = np.mean([r["proba"] for r in ok], axis=0)
-            consensus = {"proba": [round(float(x), 4) for x in p], "pred": int(np.argmax(p)),
-                         "agree": len({r["pred"] for r in ok}) == 1, "n": len(ok)}
-        results["_consensus"] = consensus
-        status = "ok" if ok else "error"
-        save(status, ", pred=%s", (consensus["pred"] if consensus else None,))
+            results["_consensus"] = _consensus(results)
+            if kind != list(models)[-1]:
+                save("running", ", pred=%s", (results["_consensus"]["pred"] if results["_consensus"] else None,))
+        consensus = results["_consensus"]
+        save("ok" if consensus else "error", ", pred=%s", (consensus["pred"] if consensus else None,))
     # full record to MinIO (inputs + results) so the history is also browsable as files
     with store.pg() as c:
         r = c.execute("SELECT id, label, inputs, models, results, status, created_at, seconds, true_class "
@@ -267,7 +312,9 @@ def init_table():
             status TEXT NOT NULL DEFAULT 'queued', pred INT, seconds REAL, true_class INT, minio_key TEXT)""")
 
 
-DEFAULT_MODELS = {"catboost": "Full", "tabpfn": "2000", "tabfm": "2000"}
+# TabFM re-reads its whole context for every patient (no cache), so 500 rows keeps it ~4x faster than 2000
+# for ~1.6 points of accuracy (Step 7); CatBoost + TabPFN already give the answer in seconds.
+DEFAULT_MODELS = {"catboost": "Full", "tabpfn": "2000", "tabfm": "500"}
 _warming = threading.Event()
 
 

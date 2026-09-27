@@ -223,21 +223,43 @@ async function openResult(id) {
   else loadHistory();
 }
 
+/* live progress: which models are done, time elapsed, and an estimated time left (from past runs) */
+function progressInfo(p) {
+  const R = p.results || {}, est = (R._est && R._est.seconds) || {}, keys = Object.keys(p.models);
+  const now = Date.now() / 1000, t0 = (R._est && R._est.t0) || new Date(p.created_at).getTime() / 1000;
+  let left = 0;
+  const rows = keys.map((k) => {
+    const r = R[k], e = est[k] || 0;
+    const st = r && ["ok", "error"].includes(r.status) ? "done" : r && r.status === "running" ? "run" : "wait";
+    if (st === "wait") left += e;
+    if (st === "run") left += Math.max(e - (now - (r.started || now)), Math.min(e, 3) * 0.3 + 1);   // never claim 0 s while still running
+    return { k, st, e, secs: r && r.seconds };
+  });
+  const total = keys.reduce((t, k) => t + (est[k] || 0), 0) || 1;
+  return { rows, elapsed: Math.max(0, now - t0), left, pct: Math.min(96, Math.max(3, ((total - left) / total) * 100)) };
+}
+function progressRows(pi) {
+  return pi.rows.map((r) => `<li class="${r.st}"><i></i><span>${esc(MODEL_LABEL[r.k])}</span><em>${r.st === "done" ? (r.secs != null ? fmtTime(r.secs) : "done") : r.st === "run" ? "working…" : "waiting · ~" + fmtTime(r.e)}</em></li>`).join("");
+}
+
 function renderResult() {
   const p = P.current, R = p.results || {}, cons = R._consensus;
   const running = ["queued", "running"].includes(p.status);
   const date = new Date(p.created_at);
+  const ready = !running || !!cons;   // an answer can be shown as soon as the first models have finished
   const head = `<div class="report-head">
       <div class="who"><h1>${esc(p.label || "Your result")}</h1><div class="meta">Check #${p.id} · ${date.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" })}, ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div></div>
-      ${running ? "" : `<div class="seg" id="pView"><button data-v="patient">${icon("user")}For you</button><button data-v="dev">${icon("code")}Developer</button></div>`}
+      ${ready && cons ? `<div class="seg" id="pView"><button data-v="patient">${icon("user")}For you</button><button data-v="dev">${icon("code")}Developer</button></div>` : ""}
       <button class="btn" id="pEdit">${icon("undo")}Edit answers</button>
     </div>`;
   let body;
   if (running) {
-    const keys = Object.keys(p.models), done = keys.filter((k) => R[k] && ["ok", "error"].includes(R[k].status)).length;
-    body = `<div class="card waiting"><span class="spin"></span><h2>Analysing your results…</h2>
-      <div class="steps-dots">${keys.map((_, i) => `<i class="${i < done ? "done" : ""}"></i>`).join("")}</div>
-      <p class="muted">Three independent models are checking your answers. The first check after starting the app can take up to 30 seconds.</p></div>`;
+    const pi = progressInfo(p);
+    const bar = `<div class="eta"><div class="eta-top"><b>${cons ? "Confirming with the last model" : "Analysing your results…"}</b>
+        <span>${fmtTime(Math.round(pi.elapsed))} elapsed · about ${fmtTime(Math.max(1, Math.round(pi.left)))} left</span></div>
+        <div class="eta-bar"><span style="width:${pi.pct}%"></span></div><ul class="eta-list">${progressRows(pi)}</ul></div>`;
+    if (cons) body = `<div class="card card-pad live-note">${bar}<p class="muted">This answer is already based on ${cons.n} of ${pi.rows.length} models and may be refined slightly when the last one finishes.</p></div>` + (P.view === "dev" ? devView(p) : patientView(p));
+    else body = `<div class="card waiting"><span class="spin"></span>${bar}<p class="muted">Independent models are checking your answers. The first check after starting the app also loads the models, which takes longer.</p></div>`;
   } else if (!cons) {
     body = `<div class="card empty">${icon("info")}<h3>This check could not be completed</h3><p>Open the Developer view for the error details.</p></div>`;
     if (P.view === "dev") body += `<div style="margin-top:20px">${devView(p)}</div>`;
@@ -262,7 +284,7 @@ function factorText(name, v) {
 
 function patientView(p) {
   const R = p.results, cons = R._consensus, c = cons.pred, pr = cons.proba, A = ANSWER[c], score = riskScore(pr);
-  const sure = `${icon(cons.agree ? "check" : "info")}We are <b>&nbsp;${sureWord(pr[c])}&nbsp;</b>(${pct(pr[c])})${cons.n > 1 ? (cons.agree ? " — all three models agree" : " — the models did not fully agree") : ""}`;
+  const sure = `${icon(cons.agree ? "check" : "info")}We are <b>&nbsp;${sureWord(pr[c])}&nbsp;</b>(${pct(pr[c])})${cons.n > 1 ? (cons.agree ? ` — ${cons.n > 2 ? "all " + cons.n : "both"} models agree` : " — the models did not fully agree") : ""}`;
   const off = P.fields.filter((f) => f.normal && bioState(f, p.inputs[f.name]) && bioState(f, p.inputs[f.name]) !== "ok");
   const offNote = off.length ? `<div class="note warn">${icon("info")}<span><b>${off.length} of your ${P.fields.filter((f) => f.normal).length} blood tests are outside the healthy range:</b> ${off.map((f) => `${esc(f.label)} <b>${bioState(f, p.inputs[f.name]) === "low" ? "low" : "high"}</b> (${fmtNum(p.inputs[f.name])} ${esc(f.unit)})`).join(", ")}.
       This score only estimates <b>hair-fall</b> risk — in the training data, higher values of most of these go with less hair fall, but a result above the healthy range can still matter for your health, so please discuss it with a doctor.</span></div>` : "";
@@ -387,7 +409,7 @@ function paintHistory() {
     return `<div class="hcols hrow ${c != null ? "risk" + c : ""}" data-id="${h.id}">
       <span class="av">${esc(initials(h.label || "#"))}</span>
       <span class="nm"><b>${esc(h.label || "Unnamed check")}</b><span>#${h.id} · ${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></span>
-      <span>${running ? `<span class="pill running"><i></i>Running</span>` : c != null ? `<span class="pill risk"><i></i>${RISK[c]} risk</span>` : `<span class="pill error">Failed</span>`}</span>
+      <span>${running && c == null ? `<span class="pill running"><i></i>Running</span>` : c != null ? `<span class="pill risk"><i></i>${RISK[c]} risk</span>` : `<span class="pill error">Failed</span>`}</span>
       <span class="sc">${cons ? `<b>${riskScore(cons.proba)}</b> <span>/ 100</span>` : "–"}</span>
       <span class="rs">${esc(topReason(h))}</span>
       <button class="btn ghost warn sm icon del" title="Delete this check">${icon("trash")}</button></div>`;

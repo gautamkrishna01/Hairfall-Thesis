@@ -25,7 +25,7 @@ async function renderCompare() {
   const { met, shap, ds } = await cLoad();
   C.met = met;
   if (!met.length) {
-    wrap.innerHTML = `<div class="card empty">${icon("chart")}<h3>No results yet</h3><p>Run the model steps (5–7) in the Notebook, or import the Kaggle runs.</p></div>`;
+    wrap.innerHTML = `<div class="card empty">${icon("chart")}<h3>No results yet</h3><p>Run the model steps (5–7) in the Notebook, or import the run results.</p></div>`;
     return;
   }
   const cell = (m, sz) => met.find((x) => x.d.model === m && x.d.size === sz)?.d;
@@ -67,7 +67,7 @@ async function renderCompare() {
       <div class="card chart-card"><h3>Macro F1</h3><div class="sub">Higher is better · the main thesis metric</div>${lineChart({ series: series((d) => d.macro_f1) })}</div>
       <div class="card chart-card"><h3>ROC-AUC</h3><div class="sub">Higher is better · one-vs-rest, macro average</div>${lineChart({ series: series((d) => d.roc_auc_ovr) })}</div>
       <div class="card chart-card"><h3>Accuracy</h3><div class="sub">Share of the ${best.test_rows.toLocaleString()} test patients classified correctly</div>${lineChart({ series: series((d) => d.accuracy) })}</div>
-      <div class="card chart-card"><h3>Time to train + predict</h3><div class="sub">Log scale · Kaggle Tesla T4 GPU · lower is better</div>${lineChart({ series: series((d) => d.fit_seconds + d.predict_seconds), log: true })}</div>
+      <div class="card chart-card"><h3>Time to train + predict</h3><div class="sub">Log scale · lower is better</div>${lineChart({ series: series((d) => d.fit_seconds + d.predict_seconds), log: true })}</div>
     </div>`, legend);
 
   h += cSection("significance", "Is the difference real?", "McNemar’s test on the same test patients — a result is significant when p &lt; 0.05.", `<div id="cMcnemar"><div class="card waiting"><span class="spin"></span></div></div>`);

@@ -150,12 +150,17 @@ def list_steps():
     with store.pg() as c:
         latest = {r[1]: _row(r) for r in c.execute(
             f"SELECT DISTINCT ON (step) {RUN_COLS} FROM runs WHERE step IS NOT NULL ORDER BY step, id DESC")}
+        # the newest run imported from Documents (Kaggle) is the one shown; local re-runs stay in the history
+        kaggle = {r[1]: _row(r) for r in c.execute(
+            f"SELECT DISTINCT ON (step) {RUN_COLS} FROM runs WHERE source='kaggle' AND status='ok' ORDER BY step, id DESC")}
         last_ok = {r[0]: r[1] for r in c.execute(
             "SELECT DISTINCT ON (step) step, code FROM runs WHERE status='ok' ORDER BY step, id DESC")}
     out = []
     for s in project.steps():
         run = latest.get(s["id"])
-        out.append({**s, "code": run["code"] if run else s["default_code"], "last_run": run,
+        k = kaggle.get(s["id"])
+        shown = run if run and run["status"] in ("queued", "running") else (k or run)
+        out.append({**s, "code": run["code"] if run else s["default_code"], "last_run": shown,
                     "saved": s["id"] in last_ok})
     return out
 

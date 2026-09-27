@@ -7,6 +7,6 @@
   "macro_f1": 0.7603,
   "weighted_f1": 0.7693,
   "roc_auc_ovr": 0.9151,
-  "fit_seconds": 50.6,
-  "predict_seconds": 59.6
+  "fit_seconds": 15.1,
+  "predict_seconds": 0.0
 }

@@ -3,12 +3,17 @@
 Usage (from backend/, with the lab's venv):
     .venv/bin/python import_kaggle_run.py ~/Downloads/Step_07c_TabFM_Full.zip
     .venv/bin/python import_kaggle_run.py ~/Downloads/some_folder/        # one sub-folder per step
+    .venv/bin/python import_kaggle_run.py --sync [~/Documents] [--force]
+        # import the newest Step_*.zip per step from a folder (default ~/Documents); steps whose
+        # newest zip is already imported are skipped, so it is safe to run on every start
 A step folder holds output.txt plus its result files (metrics.json / shap_summary.json, csv, png ...).
 The run is stored with the step's local code (backend/steps/), so it can be re-run here; the Kaggle
 version of the code stays in backend/kaggle/.
 """
+import json
 import mimetypes
 import re
+import zipfile
 import shutil
 import sys
 import tempfile
@@ -50,10 +55,54 @@ def import_step(step: str, src: Path):
     print(f"Imported {step} as run #{rid} -> thesis_project/{step}/")
 
 
+def _clean_log(text: str) -> str:
+    return re.sub(r"\n?\[finished OK \| time: [\d.]+s\]\n?", "", text)
+
+
+def sync(folder: Path, force: bool = False):
+    """Import the newest zip of every step found in `folder` (Kaggle downloads, e.g. ~/Documents)."""
+    newest = {}  # step -> newest zip
+    for z in folder.glob("Step_*.zip"):
+        try:
+            with zipfile.ZipFile(z) as zf:
+                step = next(n.split("/")[0] for n in zf.namelist() if n.endswith("/output.txt"))
+        except (zipfile.BadZipFile, StopIteration):
+            continue
+        if step not in newest or z.stat().st_mtime > newest[step].stat().st_mtime:
+            newest[step] = z
+    if not newest:
+        print(f"no Step_*.zip files in {folder}")
+        return
+    todo = 0
+    for step in sorted(newest):
+        if step not in project.step_ids():
+            print(f"skip {newest[step].name}: unknown step {step}")
+            continue
+        with zipfile.ZipFile(newest[step]) as zf:
+            new_text = _clean_log(zf.read(f"{step}/output.txt").decode())
+        with store.pg() as c:
+            row = c.execute("SELECT outputs FROM runs WHERE step=%s AND source='kaggle' ORDER BY id DESC LIMIT 1",
+                            (step,)).fetchone()
+        old = row[0] if row else None
+        old = json.loads(old) if isinstance(old, str) else old
+        if not force and old and old[0].get("text") == new_text:
+            continue
+        tmp = Path(tempfile.mkdtemp())
+        shutil.unpack_archive(newest[step], tmp)
+        import_step(step, tmp / step)
+        shutil.rmtree(tmp, ignore_errors=True)
+        todo += 1
+    print(f"Sync done: {todo} step(s) imported, {len(newest) - todo} already up to date ({folder})")
+
+
 def main():
     if len(sys.argv) < 2:
         raise SystemExit(__doc__)
     store.init()
+    if sys.argv[1] == "--sync":
+        args = [a for a in sys.argv[2:] if a != "--force"]
+        sync(Path(args[0] if args else "~/Documents").expanduser(), "--force" in sys.argv)
+        return
     src = Path(sys.argv[1]).expanduser()
     if src.suffix == ".zip":
         tmp = Path(tempfile.mkdtemp())
