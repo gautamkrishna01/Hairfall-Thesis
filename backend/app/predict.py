@@ -239,17 +239,20 @@ ORDER = ["catboost", "tabpfn", "tabfm"]                    # fastest first, so t
 
 
 def estimates(models: dict) -> dict:
-    """Expected seconds per model = median of its recent successful runs at the same size (+ load time if cold)."""
+    """Expected seconds per model = its last successful run at the same size (+ load time if cold).
+    The most recent run only (not an average): after any code/setting change that alters a model's
+    speed, the estimate should reflect that immediately rather than being dragged down by older runs."""
     seen: dict = {}
     with store.pg() as c:
         for (res,) in c.execute("SELECT results FROM predictions WHERE status='ok' ORDER BY id DESC LIMIT 40"):
             for k, r in (res or {}).items():
+                if (k, r.get("size") if isinstance(r, dict) else None) in seen:
+                    continue  # keep only the newest (rows are already newest-first)
                 if isinstance(r, dict) and r.get("status") == "ok" and r.get("predict_seconds") is not None:
-                    seen.setdefault((k, r.get("size")), []).append(r["predict_seconds"])
+                    seen[(k, r.get("size"))] = r["predict_seconds"]
     out = {}
     for k, size in models.items():
-        v = seen.get((k, size))
-        base = float(np.median(v[:10])) if v else float(DEFAULT_EST[k])
+        base = seen.get((k, size), float(DEFAULT_EST[k]))
         out[k] = round(base + (0 if (k, size) in _cache else LOAD_EST[k]), 1)
     return out
 

@@ -261,9 +261,6 @@ input[type=number] { -moz-appearance: textfield; }
 .waiting { display: flex; flex-direction: column; align-items: center; gap: 13.3px; padding: 65.5px 20.9px; text-align: center; }
 .waiting .spin { width: 39.1px; height: 39.1px; border-width: 4.5px; }
 .waiting h2 { font-size: 20.9px; }
-.steps-dots { display: flex; gap: 10.5px; }
-.steps-dots i { width: 52.8px; height: 6.5px; border-radius: 6.5px; background: var(--surface-3); }
-.steps-dots i.done { background: var(--brand); }
 .eta { width: 100%; max-width: 460px; text-align: left; margin: 0 auto; }
 .eta-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10.5px; font-size: 15.5px; }
 .eta-top span { color: var(--muted); font-size: 13.7px; white-space: nowrap; }
